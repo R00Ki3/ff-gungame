@@ -35,9 +35,9 @@ function player_spawn(player)
 	end
 
 	local player = CastToPlayer(player)
-	player:RemoveAllWeapons()
-	player:GiveWeapon(GetCurrentWeapon(player), true)
-	RestockFull(player)
+   
+    RestockFull(player)
+    player:GiveWeapon(GetCurrentWeapon(player), true)
 end
 
 function player_killed(player, damageinfo)
@@ -46,7 +46,7 @@ function player_killed(player, damageinfo)
 	end
 
 	local player = CastToPlayer(player)
-	if not damageinfo or then return end
+	if not damageinfo then return end
     local attacker = CastToPlayer(damageinfo:GetAttacker())
 	if not IsPlayer(attacker) then return end
 
@@ -63,6 +63,11 @@ function player_onchat(player, chatstring)
 	if message == "!next" then
 		GiveNextWeapon(player)
 		return false
+    end
+    
+    if message == "!reset" then
+		ResetAllLevels()
+		return false
 	end
 
 	return true -- All other chat should be allowed.
@@ -75,19 +80,21 @@ function GiveNextWeapon(player)
 	player_table[player:GetSteamID()].current_weapon = player_table[player:GetSteamID()].current_weapon + 1
 	
 	if not CheckForWin(player) then
-		player:RemoveAllWeapons()
-		player:GiveWeapon(GetCurrentWeapon(player), true)
-		RestockFull(player)
+        RestockFull(player)
+        player:GiveWeapon(GetCurrentWeapon(player), true)
 	end
 end
 
 -- Resupply a player with full of everything
 function RestockFull(player)
+    player:RemoveAllWeapons()
+    player:RemoveAllAmmo(true)
 	player:AddAmmo( Ammo.kNails, 400 )
 	player:AddAmmo( Ammo.kShells, 400 )
 	player:AddAmmo( Ammo.kRockets, 400 )
 	player:AddAmmo( Ammo.kCells, 400 )
 end
+
 -- get the current weapon a player has
 function GetCurrentWeapon(player)
 	return weapon_list[player_table[player:GetSteamID()].current_weapon]
@@ -96,8 +103,23 @@ end
 -- If a player wins then end the game.
 function CheckForWin(player)
 	if player_table[player:GetSteamID()].current_weapon > table.getn(weapon_list) then
-		ChatToAll(player:GetName().." Wins!")
-		GoToIntermission()
+        ChatToAll(player:GetName().." Wins!")
+        ResetAllLevels()
+        RespawnAllPlayers()
 		return true
 	end	
+end
+
+ -- Reset all gun levels.
+function ResetAllLevels()
+    for k in pairs(player_table) do
+        player_table[k].current_weapon = 1
+    end
+
+    return true
+end
+
+-- Respawn all players
+function RespawnAllPlayers()
+	ApplyToAll({ AT.kRemovePacks, AT.kRemoveProjectiles, AT.kRespawnPlayers, AT.kRemoveBuildables, AT.kRemoveRagdolls, AT.kStopPrimedGrens, AT.kReloadClips, AT.kAllowRespawn, AT.kReturnDroppedItems })
 end
